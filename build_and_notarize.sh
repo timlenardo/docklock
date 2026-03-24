@@ -125,9 +125,19 @@ done
 rm -rf "$DMG_LAYOUT_DIR" "$DMG_PATH" "$DMG_RW_PATH"
 sleep 1
 
-mkdir -p "$DMG_LAYOUT_DIR"
+# Stage only the app — Applications symlink and background go in after mounting
+# so Finder can properly resolve the Applications icon
+mkdir -p "$DMG_LAYOUT_DIR/.background"
 cp -R "$APP_PATH" "$DMG_LAYOUT_DIR/$APP_NAME.app"
-ln -s /Applications "$DMG_LAYOUT_DIR/Applications"
+
+# Background image
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/dmg_assets/background.png" ]; then
+  cp "$SCRIPT_DIR/dmg_assets/background.png" "$DMG_LAYOUT_DIR/.background/background.png"
+  echo "  ✅ Background image copied"
+else
+  echo "  ⚠️  No background at dmg_assets/background.png — skipping"
+fi
 
 ########################################
 # 💽 Create Writable DMG
@@ -150,6 +160,10 @@ echo "📝 Renaming volume to $APP_NAME..."
 diskutil rename "/Volumes/$TEMP_VOL_NAME" "$APP_NAME"
 sleep 1
 
+# Create Applications symlink inside the mounted volume so Finder resolves the icon correctly
+ln -s /Applications "/Volumes/$APP_NAME/Applications"
+sleep 1
+
 ########################################
 # 🪄 Customize Finder Layout
 ########################################
@@ -161,23 +175,25 @@ tell application "Finder"
         set current view of container window to icon view
         set toolbar visible of container window to false
         set statusbar visible of container window to false
-        set the bounds of container window to {100, 100, 580, 340}
+        set the bounds of container window to {100, 100, 640, 400}
         set viewOptions to the icon view options of container window
         set arrangement of viewOptions to not arranged
         set icon size of viewOptions to 88
-        set position of item "$APP_NAME.app" of container window to {140, 120}
-        set position of item "Applications" of container window to {340, 120}
+        set background picture of viewOptions to file ".background:background.png"
+        set position of item "$APP_NAME.app" of container window to {147, 155}
+        set position of item "Applications" of container window to {393, 155}
         close
         open
         update without registering applications
-        delay 1
+        delay 2
         eject
     end tell
 end tell
 EOF
 
+sleep 2
+hdiutil detach "$DEVICE" -force 2>/dev/null || true
 sleep 1
-hdiutil detach "$DEVICE" 2>/dev/null || true
 
 ########################################
 # 📦 Convert DMG
