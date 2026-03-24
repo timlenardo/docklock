@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DockLock — Keep Your Dock Hidden</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #f9f9f7; --fg: #1a1a1a; --secondary: #666;
+      --border: #e0e0e0; --green: #29ac42; --yellow: #febc2e;
+      --blue: #2c7df5; --radius: 14px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg); color: var(--fg);
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    }
+    nav { width: 100%; max-width: 860px; padding: 28px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+    .nav-logo span { display: inline-block; width: 10px; height: 10px; background: var(--green); border-radius: 50%; margin-right: 7px; vertical-align: middle; position: relative; top: -1px; }
+    nav a { font-size: 14px; color: var(--secondary); text-decoration: none; }
+    nav a:hover { color: var(--fg); }
+    .hero { max-width: 860px; width: 100%; padding: 80px 24px 64px; text-align: center; }
+    .badge { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border); border-radius: 100px; padding: 5px 14px; font-size: 13px; color: var(--secondary); margin-bottom: 32px; }
+    .badge-dot { width: 7px; height: 7px; background: var(--green); border-radius: 50%; }
+    h1 { font-size: clamp(38px, 6vw, 60px); font-weight: 700; letter-spacing: -1.5px; line-height: 1.1; margin-bottom: 20px; }
+    h1 em { font-style: normal; color: var(--secondary); }
+    .subtitle { font-size: 18px; color: var(--secondary); max-width: 480px; margin: 0 auto 40px; line-height: 1.6; }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 10px; font-size: 15px; font-weight: 500; text-decoration: none; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: var(--fg); color: white; }
+    .btn-secondary { background: white; color: var(--fg); border: 1px solid var(--border); }
+    .mockup-section { max-width: 860px; width: 100%; padding: 0 24px 100px; text-align: center; }
+    .mockup-section-copy { margin-bottom: 40px; }
+    .mockup-section-copy h2 { font-size: clamp(24px, 3.5vw, 32px); font-weight: 700; letter-spacing: -0.6px; margin-bottom: 12px; }
+    .mockup-section-copy p { font-size: 17px; color: var(--secondary); line-height: 1.6; max-width: 420px; margin: 0 auto; }
+    .mockup-wrap { display: flex; justify-content: center; }
+    /* macOS chrome */
+    .macos-chrome { width: 420px; border-radius: 12px; overflow: hidden; box-shadow: 0 24px 80px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.12); }
+    /* Light menu bar */
+    .macos-menubar { background: rgba(235,235,235,0.82); backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px); height: 28px; display: flex; align-items: center; overflow: hidden; }
+    .macos-menubar-crop { flex: 1; height: 100%; }
+    .macos-menubar-right { display: flex; align-items: center; gap: 2px; padding-right: 12px; flex-shrink: 0; }
+    .macos-sys-icon { display: flex; align-items: center; justify-content: center; padding: 0 6px; height: 28px; }
+    .macos-time { font-size: 12px; color: rgba(0,0,0,0.75); font-weight: 500; padding: 0 6px; letter-spacing: -0.2px; }
+    .macos-docklock-icon { padding: 0 7px; height: 28px; display: flex; align-items: center; background: rgba(0,0,0,0.1); border-radius: 4px; }
+    /* Desktop wallpaper — macOS Sonoma California hills */
+    .macos-dropdown-area {
+      padding: 6px 0 20px;
+      display: flex;
+      justify-content: flex-end;
+      padding-right: 148px;
+      background:
+        radial-gradient(ellipse at 42% 20%, rgba(255,210,120,0.55) 0%, transparent 52%),
+        radial-gradient(ellipse at 75% 0%, rgba(140,180,220,0.4) 0%, transparent 45%),
+        linear-gradient(180deg,
+          #6B8FBF 0%,
+          #A8C4DC 18%,
+          #D4A876 38%,
+          #B8884A 52%,
+          #8B6830 65%,
+          #6A5128 78%,
+          #4E3D20 100%
+        );
+    }
+    /* Dropdown menu — light vibrancy style */
+    .menu-mockup { background: rgba(248,248,248,0.97); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(0,0,0,0.1); border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.1); padding: 6px 0; width: 210px; font-size: 13px; }
+    .menu-item { display: flex; align-items: center; padding: 5px 14px; color: rgba(0,0,0,0.85); }
+    .menu-dot { margin-right: 8px; }
+    .menu-item.disabled { color: rgba(0,0,0,0.5); }
+    .menu-item.secondary-text { font-size: 11.5px; color: rgba(0,0,0,0.38); padding-top: 1px; padding-bottom: 5px; }
+    .menu-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .dot-green { background: var(--green); } .dot-yellow { background: var(--yellow); }
+    .menu-divider { height: 1px; background: rgba(0,0,0,0.1); margin: 4px 0; }
+    .menu-item.action { cursor: pointer; } .menu-item.muted { color: rgba(255,255,255,0.25); }
+
+    /* ── DEMO ── */
+    .demo-section { max-width: 860px; width: 100%; padding: 0 24px 80px; text-align: center; }
+    .demo-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--secondary); margin-bottom: 10px; }
+    .demo-heading { font-size: clamp(26px, 4vw, 36px); font-weight: 700; letter-spacing: -0.8px; margin-bottom: 48px; }
+    .demo-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 580px) { .demo-panels { grid-template-columns: 1fr; } }
+    .demo-panel { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px 0; overflow: hidden; transition: opacity 0.5s ease; }
+    .demo-panel.panel-inactive { opacity: 0.35; cursor: pointer; }
+    .demo-panel.panel-inactive:hover { opacity: 0.6; }
+    .demo-panel .scene { transform: scale(1.35); transform-origin: top center; margin-bottom: 88px; }
+    .demo-panel-label { font-size: 13px; font-weight: 600; margin-bottom: 18px; display: flex; align-items: center; justify-content: center; gap: 7px; }
+    .demo-panel-label::before { content: ''; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .demo-panel-label.bad::before { background: #ff5f57; }
+    .demo-panel-label.good::before { background: var(--green); }
+
+    /* Face */
+    .face-area { display: flex; justify-content: center; margin-bottom: 20px; }
+    .face { width: 52px; height: 52px; background: #FFD60A; border-radius: 50%; border: 2px solid rgba(0,0,0,0.10); position: relative; }
+    .face .brows { display: flex; gap: 14px; justify-content: center; position: absolute; top: 9px; width: 100%; }
+    .face .brow { width: 10px; height: 2px; background: #1a1a1a; border-radius: 2px; transition: transform 0.3s ease; }
+    .face .brow.left { transform-origin: right center; }
+    .face .brow.right { transform-origin: left center; }
+    .face .eyes { display: flex; gap: 10px; justify-content: center; position: absolute; top: 16px; width: 100%; }
+    .face .eye { width: 5px; height: 5px; background: #1a1a1a; border-radius: 50%; transition: height 0.25s, width 0.25s, border-radius 0.25s, margin-top 0.25s; }
+    .face .mouth { position: absolute; bottom: 11px; left: 50%; transform: translateX(-50%); width: 18px; height: 8px; border-style: solid; border-width: 2px; border-color: #1a1a1a; border-top-color: transparent; border-radius: 0 0 18px 18px; transition: all 0.3s ease; }
+    .face .sweat  { position: absolute; right: 4px; top: 8px;  width: 5px; height: 7px; background: #5ba4d4; border-radius: 50% 0 50% 50%; transform: rotate(30deg) scale(0); transition: transform 0.3s ease; }
+    .face .tear   { position: absolute; left: 11px; top: 20px; width: 4px; height: 6px; background: #7ec8e3; border-radius: 50% 50% 50% 0; transform: rotate(-35deg) scale(0); transition: transform 0.5s ease; }
+    .face.sweating      .sweat  { transform: rotate(30deg) scale(1); }
+    .face.heavy-sweating .sweat  { transform: rotate(30deg) scale(1); }
+    .face.crying .tear  { transform: rotate(-35deg) scale(1); }
+
+    /* Face states — "frustrated" is now driven by the active variant class + active-frust */
+    .face.flat-mouth .mouth { width: 13px; height: 0; border-top-color: transparent; border-left-color: transparent; border-right-color: transparent; border-bottom-color: #1a1a1a; border-radius: 1px; bottom: 14px; }
+    .face.concentrating .mouth { width: 13px; height: 0; border-top-color: transparent; border-left-color: transparent; border-right-color: transparent; border-bottom-color: #1a1a1a; border-radius: 1px; bottom: 14px; }
+    .face.confused .brow.left { transform: translateY(-3px); }
+    .face.confused .mouth { width: 8px; height: 8px; border-color: #1a1a1a; border-radius: 50%; bottom: 10px; }
+    .face.exasperated .brow.left  { transform: rotate(22deg); }
+    .face.exasperated .brow.right { transform: rotate(-22deg); }
+    .face.exasperated .eye { height: 2px; margin-top: 2px; border-radius: 1px; }
+    .face.exasperated .mouth { width: 24px; height: 13px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 18px 18px 0 0; bottom: 6px; }
+
+    /* Monitors */
+    .scene { display: flex; flex-direction: column; align-items: center; }
+    .monitor-row { display: flex; gap: 8px; align-items: flex-end; justify-content: center; position: relative; }
+    .monitor { display: flex; flex-direction: column; align-items: center; }
+    .screen { width: 116px; height: 84px; background: #0d1117; border-radius: 5px 5px 0 0; border: 2px solid #3a3a3a; position: relative; overflow: hidden; }
+    .screen.dim { background: #111820; border-color: #2a2a2a; }
+    .screen::before { content: ''; display: block; height: 10px; background: #1c2333; border-bottom: 1px solid #2a3348; }
+    .screen.dim::before { background: #161e2a; border-bottom-color: #202838; }
+    .monitor-neck { width: 18px; height: 6px; background: #3a3a3a; }
+    .monitor-foot { width: 36px; height: 4px; background: #3a3a3a; border-radius: 0 0 3px 3px; }
+    .desk { width: 260px; height: 10px; background: linear-gradient(to bottom, #d6cfc4, #c8c0b4); border-radius: 0 0 6px 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.10); }
+    .cursor { position: absolute; z-index: 50; pointer-events: none; top: 24px; left: 44px; /* movement driven by JS bezier, no CSS transition */ }
+    .dock { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%); transition: transform 0.3s cubic-bezier(.34,1.56,.64,1); background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.12); border-bottom: none; border-radius: 7px 7px 0 0; padding: 5px 7px 4px; display: flex; gap: 4px; align-items: center; }
+    .dock.open { transform: translateX(-50%) translateY(0); }
+    .di { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
+    @keyframes coin-float {
+      0%   { transform: translateX(-50%) translateY(0px)  scale(0);   opacity: 1; }
+      18%  { transform: translateX(-50%) translateY(0px)  scale(1.3); opacity: 1; }
+      35%  { transform: translateX(-50%) translateY(-3px) scale(1);   opacity: 1; }
+      100% { transform: translateX(-50%) translateY(-8px) scale(1);   opacity: 0; }
+    }
+    .lock-badge { position: absolute; top: 33px; left: 58px; transform: translateX(-50%) scale(0); font-size: 16px; opacity: 0; pointer-events: none; z-index: 10; }
+    .lock-badge.pop { animation: coin-float 0.8s ease-out forwards; }
+
+    /* Features */
+    .features { max-width: 860px; width: 100%; padding: 0 24px 100px; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+    .feature { background: white; border: 1px solid var(--border); border-radius: var(--radius); padding: 28px 24px; }
+    .feature-icon { font-size: 26px; margin-bottom: 14px; }
+    .feature h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.2px; }
+    .feature p { font-size: 14px; color: var(--secondary); line-height: 1.6; }
+    footer { border-top: 1px solid var(--border); width: 100%; padding: 28px 24px; display: flex; justify-content: center; gap: 24px; font-size: 13px; color: var(--secondary); }
+    footer a { color: var(--secondary); text-decoration: none; }
+    footer a:hover { color: var(--fg); }
+
+    /* ── Variation 1: sharp classic — very steep V brows, ultra-thin squint, tight frown ── */
+    .face.frust1.active-frust .brow.left  { transform: rotate(28deg) translateY(1px); }
+    .face.frust1.active-frust .brow.right { transform: rotate(-28deg) translateY(1px); }
+    .face.frust1.active-frust .eye        { height: 1.5px; margin-top: 2px; border-radius: 1px; }
+    .face.frust1.active-frust .mouth      { width: 20px; height: 9px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 18px 18px 0 0; bottom: 8px; }
+
+    /* ── Variation 2: wide-eyed WTF — Fury V 3-phase escalation ── */
+    /* Phase 1: left brow barely raised, right at rest, small eyes (first shock) */
+    .face.frust2.active-frust .brow.left  { transform: translateY(-5px) rotate(-3deg); }
+    .face.frust2.active-frust .eye        { height: 6px; width: 6px; border-radius: 50%; }
+    .face.frust2.active-frust .mouth      { width: 8px; height: 8px; border-color: #1a1a1a; border-radius: 50%; bottom: 10px; }
+    /* Phase 2: both brows in, left higher (sweating = 2nd attempt frustration) */
+    .face.frust2.active-frust.sweating .brow.left  { transform: rotate(10deg) translateY(-6px); }
+    .face.frust2.active-frust.sweating .brow.right { transform: rotate(-5deg) translateY(-2px); }
+    .face.frust2.active-frust.sweating .eye        { height: 7px; width: 7px; border-radius: 50%; }
+    .face.frust2.active-frust.sweating .mouth      { width: 10px; height: 10px; border-color: #1a1a1a; border-radius: 50%; bottom: 7px; }
+    /* Phase 3: Fury V max — left brow peaks, right slams in, eyes biggest */
+    .face.frust2.active-frust.rage .brow.left  { transform: rotate(15deg) translateY(-9px); }
+    .face.frust2.active-frust.rage .brow.right { transform: rotate(-20deg) translateY(-1px); }
+    .face.frust2.active-frust.rage .eye        { height: 10px; width: 10px; border-radius: 50%; }
+
+    /* Blink animation */
+    @keyframes eye-blink {
+      0%, 100% { transform: scaleY(1); }
+      35%, 65% { transform: scaleY(0.05); }
+    }
+    .face.blinking .eye { animation: eye-blink 0.35s ease 0s 2; transform-origin: center; }
+
+    /* Rage-eruption shake — 10 variants */
+    @keyframes face-shake-1 { /* Twitch — fast, small */
+      0%,100% { transform: translate(0,0); }
+      20% { transform: translate(-3px, 1px); }
+      40% { transform: translate(3px, -1px); }
+      60% { transform: translate(-2px, 2px); }
+      80% { transform: translate(2px, -1px); }
+    }
+    @keyframes face-shake-2 { /* Jitter — ultra fast, tiny */
+      0%,100% { transform: translate(0,0); }
+      25% { transform: translate(-2px, 1px); }
+      50% { transform: translate(2px, -1px); }
+      75% { transform: translate(-1px, 2px); }
+    }
+    @keyframes face-shake-3 { /* Slam — medium, larger sweeps */
+      0%,100% { transform: translate(0,0); }
+      15% { transform: translate(-7px, 2px); }
+      35% { transform: translate(7px, -3px); }
+      55% { transform: translate(-6px, 4px); }
+      75% { transform: translate(5px, -2px); }
+    }
+    @keyframes face-shake-4 { /* Convulse — fast + large */
+      0%,100% { transform: translate(0,0); }
+      10% { transform: translate(-10px, 3px); }
+      25% { transform: translate(10px, -4px); }
+      40% { transform: translate(-8px, 5px); }
+      55% { transform: translate(9px, -3px); }
+      70% { transform: translate(-7px, 4px); }
+      85% { transform: translate(8px, -5px); }
+    }
+    @keyframes face-shake-5 { /* Erratic — irregular rhythm */
+      0%,100% { transform: translate(0,0); }
+      8%  { transform: translate(-5px, 3px); }
+      18% { transform: translate(8px, -1px); }
+      32% { transform: translate(-3px, 6px); }
+      45% { transform: translate(10px, -4px); }
+      58% { transform: translate(-7px, 2px); }
+      70% { transform: translate(4px, -7px); }
+      83% { transform: translate(-9px, 3px); }
+      92% { transform: translate(6px, -2px); }
+    }
+    @keyframes face-shake-6 { /* Earthquake — very large amplitude */
+      0%,100% { transform: translate(0,0); }
+      12% { transform: translate(-14px, 4px); }
+      25% { transform: translate(12px, -6px); }
+      38% { transform: translate(-10px, 8px); }
+      50% { transform: translate(14px, -5px); }
+      63% { transform: translate(-12px, 7px); }
+      75% { transform: translate(10px, -8px); }
+      88% { transform: translate(-11px, 5px); }
+    }
+    @keyframes face-shake-7 { /* Tremor — ultra fast micro */
+      0%,100% { transform: translate(0,0); }
+      16% { transform: translate(-2px, 1px); }
+      33% { transform: translate(2px, -1px); }
+      50% { transform: translate(-1px, 2px); }
+      66% { transform: translate(2px, -2px); }
+      83% { transform: translate(-2px, 1px); }
+    }
+    @keyframes face-shake-8 { /* Wild — fast + big + heavy y-axis */
+      0%,100% { transform: translate(0,0); }
+      10% { transform: translate(-12px, 7px); }
+      22% { transform: translate(14px, -9px); }
+      35% { transform: translate(-10px, 11px); }
+      48% { transform: translate(13px, -7px); }
+      60% { transform: translate(-14px, 9px); }
+      73% { transform: translate(11px, -10px); }
+      86% { transform: translate(-13px, 6px); }
+    }
+    @keyframes face-shake-9 { /* Spin-out — shakes + rotates */
+      0%,100% { transform: translate(0,0) rotate(0deg); }
+      15% { transform: translate(-8px, 3px) rotate(-3deg); }
+      30% { transform: translate(9px, -4px) rotate(2deg); }
+      45% { transform: translate(-7px, 5px) rotate(-4deg); }
+      60% { transform: translate(10px, -3px) rotate(3deg); }
+      75% { transform: translate(-9px, 4px) rotate(-2deg); }
+      90% { transform: translate(8px, -5px) rotate(4deg); }
+    }
+    @keyframes face-shake-10 { /* Nuclear — max chaos */
+      0%,100% { transform: translate(0,0) rotate(0deg); }
+      8%  { transform: translate(-16px, 5px) rotate(-5deg); }
+      18% { transform: translate(15px, -9px) rotate(4deg); }
+      28% { transform: translate(-13px, 11px) rotate(-6deg); }
+      38% { transform: translate(16px, -7px) rotate(5deg); }
+      48% { transform: translate(-15px, 9px) rotate(-4deg); }
+      58% { transform: translate(14px, -10px) rotate(6deg); }
+      68% { transform: translate(-16px, 7px) rotate(-5deg); }
+      78% { transform: translate(15px, -8px) rotate(4deg); }
+      88% { transform: translate(-14px, 10px) rotate(-6deg); }
+      96% { transform: translate(16px, -6px) rotate(5deg); }
+    }
+    .face.shake-var-1.shaking  { animation: face-shake-1  0.20s linear       infinite; }
+    .face.shake-var-2.shaking  { animation: face-shake-2  0.12s linear       infinite; }
+    .face.shake-var-3.shaking  { animation: face-shake-3  0.35s ease-in-out  infinite; }
+    .face.shake-var-4.shaking  { animation: face-shake-4  0.22s ease         infinite; }
+    .face.shake-var-5.shaking  { animation: face-shake-5  0.30s ease         infinite; }
+    .face.shake-var-6.shaking  { animation: face-shake-6  0.25s ease         infinite; }
+    .face.shake-var-7.shaking  { animation: face-shake-7  0.09s linear       infinite; }
+    .face.shake-var-8.shaking  { animation: face-shake-8  0.20s ease         infinite; }
+    .face.shake-var-9.shaking  { animation: face-shake-9  0.28s ease-in-out  infinite; }
+    .face.shake-var-10.shaking { animation: face-shake-10 0.15s ease         infinite; }
+
+    /* ── Variation 3: one-brow skeptic — asymmetric brows, half-squint, tight smirk-frown ── */
+    .face.frust3.active-frust .brow.left  { transform: translateY(-4px) rotate(-4deg); }
+    .face.frust3.active-frust .brow.right { transform: translateY(2px) rotate(-24deg); }
+    .face.frust3.active-frust .eye        { height: 3px; margin-top: 1px; border-radius: 2px; }
+    .face.frust3.active-frust .mouth      { width: 14px; height: 5px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 14px 14px 0 0; bottom: 10px; }
+
+    /* ── Variation 4: grumpy close-set — brows pushed low near eyes, deep broad frown ── */
+    .face.frust4.active-frust .brow.left  { transform: rotate(15deg) translateY(3px); }
+    .face.frust4.active-frust .brow.right { transform: rotate(-15deg) translateY(3px); }
+    .face.frust4.active-frust .mouth      { width: 16px; height: 10px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 16px 16px 0 0; bottom: 6px; }
+
+    /* ── Variation 5: seething — extreme brow slant, eyes slit to 1px, pressed flat lips ── */
+    .face.frust5.active-frust .brow.left  { transform: rotate(36deg) translateY(1px); }
+    .face.frust5.active-frust .brow.right { transform: rotate(-36deg) translateY(1px); }
+    .face.frust5.active-frust .eye        { height: 1px; margin-top: 3px; border-radius: 1px; }
+    .face.frust5.active-frust .mouth      { width: 14px; height: 0; border-top-color: transparent; border-left-color: transparent; border-right-color: transparent; border-bottom-color: #1a1a1a; border-radius: 1px; bottom: 12px; }
+
+    /* ── Variation 6: exasperated wide — brows up + angled, squint, very wide open frown ── */
+    .face.frust6.active-frust .brow.left  { transform: rotate(20deg) translateY(-2px); }
+    .face.frust6.active-frust .brow.right { transform: rotate(-20deg) translateY(-2px); }
+    .face.frust6.active-frust .eye        { height: 2px; margin-top: 2px; border-radius: 1px; }
+    .face.frust6.active-frust .mouth      { width: 26px; height: 12px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 18px 18px 0 0; bottom: 5px; }
+
+    /* ── Variation 7: pouty — mild brow, round soft frown, dot eyes ── */
+    .face.frust7.active-frust .brow.left  { transform: rotate(12deg); }
+    .face.frust7.active-frust .brow.right { transform: rotate(-12deg); }
+    .face.frust7.active-frust .eye        { height: 4px; width: 4px; border-radius: 50%; }
+    .face.frust7.active-frust .mouth      { width: 16px; height: 7px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 18px 18px 0 0; bottom: 9px; }
+
+    /* ── Variation 8: scrunched shut — brows crush down onto squint eyes, tiny frown ── */
+    .face.frust8.active-frust .brow.left  { transform: rotate(18deg) translateY(4px); }
+    .face.frust8.active-frust .brow.right { transform: rotate(-18deg) translateY(4px); }
+    .face.frust8.active-frust .eye        { height: 1.5px; width: 7px; margin-top: 3px; border-radius: 1px; }
+    .face.frust8.active-frust .mouth      { width: 12px; height: 7px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 14px 14px 0 0; bottom: 10px; }
+
+    /* ── Variation 9: screaming — angry brows, squint, wide oval open mouth ── */
+    .face.frust9.active-frust .brow.left  { transform: rotate(22deg); }
+    .face.frust9.active-frust .brow.right { transform: rotate(-22deg); }
+    .face.frust9.active-frust .eye        { height: 1.5px; margin-top: 2px; border-radius: 1px; }
+    .face.frust9.active-frust .mouth      { width: 18px; height: 14px; border-color: #1a1a1a; border-radius: 50%; bottom: 6px; }
+
+    /* ── Variation 10: twitching — asymmetric brows (one up one very down), tired squint ── */
+    .face.frust10.active-frust .brow.left  { transform: rotate(4deg) translateY(-2px); }
+    .face.frust10.active-frust .brow.right { transform: rotate(-32deg) translateY(1px); }
+    .face.frust10.active-frust .eye        { height: 3px; margin-top: 1px; border-radius: 2px; }
+    .face.frust10.active-frust .mouth      { width: 14px; height: 6px; border-top-color: #1a1a1a; border-bottom-color: transparent; border-radius: 12px 12px 0 0; bottom: 10px; }
+
+    /* ── RAGE PICKER — 3-phase animation: one-brow → asymmetric medium → max ──
+       Phase 1 (rage-phase-1): left brow raised, skeptical — shared across all variants
+       Phase 2 (rage-phase-2): bug-eyed medium, left brow still higher — shared
+       Phase 3 (rage-phase-3 + rage-var-N): max escalation, left brow still leads  */
+
+    /* ── Phase 1: left brow raised, small O-mouth (same for all) ── */
+    .face.frust2.rage-phase-1 .brow.left { transform: translateY(-5px) rotate(-3deg); }
+    .face.frust2.rage-phase-1 .eye       { height: 6px; width: 6px; border-radius: 50%; }
+    .face.frust2.rage-phase-1 .mouth     { width: 8px; height: 8px; border-color: #1a1a1a; border-radius: 50%; bottom: 10px; }
+
+    /* ── Phase 2: asymmetric medium — left brow higher than right, 7px eyes ── */
+    .face.frust2.rage-phase-2 .brow.left  { transform: rotate(10deg) translateY(-6px); }
+    .face.frust2.rage-phase-2 .brow.right { transform: rotate(-5deg) translateY(-2px); }
+    .face.frust2.rage-phase-2 .eye        { height: 7px; width: 7px; border-radius: 50%; }
+    .face.frust2.rage-phase-2 .mouth      { width: 10px; height: 10px; border-color: #1a1a1a; border-radius: 50%; bottom: 7px; }
+
+    /* ── Phase 3 shared: O-mouth baseline, overridden only by var 10 ── */
+    .face.frust2.rage-phase-3 .mouth { width: 10px; height: 10px; border-color: #1a1a1a; border-radius: 50%; bottom: 7px; }
+
+    /* Phase 3 per variant — left brow always more dramatic than right */
+
+    /* Var 1 — Standard: both up, left higher */
+    .face.frust2.rage-phase-3.rage-var-1 .brow.left  { transform: rotate(10deg) translateY(-8px); }
+    .face.frust2.rage-phase-3.rage-var-1 .brow.right { transform: rotate(-13deg) translateY(-5px); }
+    .face.frust2.rage-phase-3.rage-var-1 .eye        { height: 11px; width: 11px; }
+
+    /* Var 2 — Fury V: left brow keeps rising each phase, right slams inward */
+    .face.frust2.rage-phase-3.rage-var-2 .brow.left  { transform: rotate(15deg) translateY(-9px); }
+    .face.frust2.rage-phase-3.rage-var-2 .brow.right { transform: rotate(-20deg) translateY(-1px); }
+    .face.frust2.rage-phase-3.rage-var-2 .eye        { height: 10px; width: 10px; }
+
+    /* Var 3 — Unhinged: left shoots to max, right slams down */
+    .face.frust2.rage-phase-3.rage-var-3 .brow.left  { transform: translateY(-10px) rotate(-6deg); }
+    .face.frust2.rage-phase-3.rage-var-3 .brow.right { transform: translateY(3px) rotate(-30deg); }
+    .face.frust2.rage-phase-3.rage-var-3 .eye        { height: 10px; width: 10px; }
+
+    /* Var 4 — Nuclear: 13px eyes, left brow slightly higher */
+    .face.frust2.rage-phase-3.rage-var-4 .brow.left  { transform: rotate(6deg) translateY(-9px); }
+    .face.frust2.rage-phase-3.rage-var-4 .brow.right { transform: rotate(-8deg) translateY(-7px); }
+    .face.frust2.rage-phase-3.rage-var-4 .eye        { height: 13px; width: 13px; }
+
+    /* Var 5 — Tall oval: eyes stretch tall, left brow higher */
+    .face.frust2.rage-phase-3.rage-var-5 .brow.left  { transform: rotate(9deg) translateY(-7px); }
+    .face.frust2.rage-phase-3.rage-var-5 .brow.right { transform: rotate(-11deg) translateY(-5px); }
+    .face.frust2.rage-phase-3.rage-var-5 .eye        { height: 14px; width: 8px; }
+
+    /* Var 6 — Death glare: left rises, right slams all the way down */
+    .face.frust2.rage-phase-3.rage-var-6 .brow.left  { transform: rotate(8deg) translateY(-1px); }
+    .face.frust2.rage-phase-3.rage-var-6 .brow.right { transform: rotate(-20deg) translateY(4px); }
+    .face.frust2.rage-phase-3.rage-var-6 .eye        { height: 10px; width: 10px; }
+
+    /* Var 7 — Manic: left shoots way up + out, right less so */
+    .face.frust2.rage-phase-3.rage-var-7 .brow.left  { transform: translateX(-4px) translateY(-10px) rotate(-4deg); }
+    .face.frust2.rage-phase-3.rage-var-7 .brow.right { transform: translateX(2px) translateY(-7px) rotate(5deg); }
+    .face.frust2.rage-phase-3.rage-var-7 .eye        { height: 11px; width: 11px; }
+
+    /* Var 8 — Implosion: extreme angles, eyes shrink to dots */
+    .face.frust2.rage-phase-3.rage-var-8 .brow.left  { transform: rotate(22deg) translateY(-7px); }
+    .face.frust2.rage-phase-3.rage-var-8 .brow.right { transform: rotate(-28deg) translateY(-5px); }
+    .face.frust2.rage-phase-3.rage-var-8 .eye        { height: 4px; width: 4px; }
+
+    /* Var 9 — Wide flat: eyes become horizontal pills, left brow higher */
+    .face.frust2.rage-phase-3.rage-var-9 .brow.left  { transform: rotate(12deg) translateY(-6px); }
+    .face.frust2.rage-phase-3.rage-var-9 .brow.right { transform: rotate(-15deg) translateY(-4px); }
+    .face.frust2.rage-phase-3.rage-var-9 .eye        { height: 5px; width: 12px; border-radius: 3px; }
+
+    /* Var 10 — Open scream: eyes 11px + mouth blows out */
+    .face.frust2.rage-phase-3.rage-var-10 .brow.left  { transform: rotate(10deg) translateY(-8px); }
+    .face.frust2.rage-phase-3.rage-var-10 .brow.right { transform: rotate(-13deg) translateY(-5px); }
+    .face.frust2.rage-phase-3.rage-var-10 .eye        { height: 11px; width: 11px; }
+    .face.frust2.rage-phase-3.rage-var-10 .mouth      { width: 16px; height: 16px; }
+
+    /* ── Tiny-mouth rage face: eyes + mouth only (brows come from final-var-N) ── */
+    /* Snap instantly — no transition on any part of the face */
+    .face.tiny-mouth,
+    .face.tiny-mouth .brow,
+    .face.tiny-mouth .eye,
+    .face.tiny-mouth .mouth { transition: none !important; }
+    .face.tiny-mouth .eye   { height: 8px; width: 8px; border-radius: 50%; }
+    .face.tiny-mouth .mouth { width: 8px; height: 10px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 10px; }
+
+    /* ── Final face brow variants — only active when tiny-mouth is present ── */
+    /* "Open" = inner ends of brows higher → worried/wide */
+    .face.tiny-mouth.final-var-1 .brow.left  { transform: rotate(-5deg) translateY(-7px); }
+    .face.tiny-mouth.final-var-1 .brow.right { transform: rotate(5deg) translateY(-7px); }
+    .face.tiny-mouth.final-var-2 .brow.left  { transform: rotate(-5deg) translateY(-3px); }
+    .face.tiny-mouth.final-var-2 .brow.right { transform: rotate(5deg) translateY(-3px); }
+    .face.tiny-mouth.final-var-3 .brow.left  { transform: rotate(-5deg) translateY(2px); }
+    .face.tiny-mouth.final-var-3 .brow.right { transform: rotate(5deg) translateY(2px); }
+    /* "Flat" = horizontal brows */
+    .face.tiny-mouth.final-var-4 .brow.left  { transform: translateY(-7px); }
+    .face.tiny-mouth.final-var-4 .brow.right { transform: translateY(-7px); }
+    .face.tiny-mouth.final-var-5 .brow.left  { transform: translateY(-3px); }
+    .face.tiny-mouth.final-var-5 .brow.right { transform: translateY(-3px); }
+    .face.tiny-mouth.final-var-6 .brow.left  { transform: translateY(2px); }
+    .face.tiny-mouth.final-var-6 .brow.right { transform: translateY(2px); }
+    /* "Angry" = inner ends lower → furrowed V */
+    .face.tiny-mouth.final-var-7 .brow.left  { transform: rotate(12deg) translateY(-7px); }
+    .face.tiny-mouth.final-var-7 .brow.right { transform: rotate(-12deg) translateY(-7px); }
+    .face.tiny-mouth.final-var-8 .brow.left  { transform: rotate(12deg) translateY(-3px); }
+    .face.tiny-mouth.final-var-8 .brow.right { transform: rotate(-12deg) translateY(-3px); }
+    .face.tiny-mouth.final-var-9 .brow.left  { transform: rotate(12deg) translateY(2px); }
+    .face.tiny-mouth.final-var-9 .brow.right { transform: rotate(-12deg) translateY(2px); }
+    /* Steeper — maximum furrowed */
+    .face.tiny-mouth.final-var-10 .brow.left  { transform: rotate(22deg) translateY(2px); }
+    .face.tiny-mouth.final-var-10 .brow.right { transform: rotate(-22deg) translateY(2px); }
+
+    /* ── Scream face variations ── */
+    /* Var 1 — Classic: balanced O, both brows arched up */
+    .face.scream-var-1.active-scream .brow.left  { transform: rotate(-6deg) translateY(-7px); }
+    .face.scream-var-1.active-scream .brow.right { transform: rotate(6deg) translateY(-7px); }
+    .face.scream-var-1.active-scream .eye        { height: 10px; width: 10px; border-radius: 50%; }
+    .face.scream-var-1.active-scream .mouth      { width: 14px; height: 16px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 8px; }
+
+    /* Var 2 — Wide mouth: horizontal oval, straight brows up */
+    .face.scream-var-2.active-scream .brow.left  { transform: translateY(-7px); }
+    .face.scream-var-2.active-scream .brow.right { transform: translateY(-7px); }
+    .face.scream-var-2.active-scream .eye        { height: 9px; width: 9px; border-radius: 50%; }
+    .face.scream-var-2.active-scream .mouth      { width: 20px; height: 14px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 9px; }
+
+    /* Var 3 — Tall wail: narrow tall oval, brows angled inward */
+    .face.scream-var-3.active-scream .brow.left  { transform: rotate(-5deg) translateY(-8px); }
+    .face.scream-var-3.active-scream .brow.right { transform: rotate(5deg) translateY(-8px); }
+    .face.scream-var-3.active-scream .eye        { height: 10px; width: 10px; border-radius: 50%; }
+    .face.scream-var-3.active-scream .mouth      { width: 10px; height: 22px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 6px; }
+
+    /* Var 4 — Horror rect: wide rectangular mouth, brows sharply arched */
+    .face.scream-var-4.active-scream .brow.left  { transform: rotate(-8deg) translateY(-10px); }
+    .face.scream-var-4.active-scream .brow.right { transform: rotate(8deg) translateY(-10px); }
+    .face.scream-var-4.active-scream .eye        { height: 11px; width: 11px; border-radius: 50%; }
+    .face.scream-var-4.active-scream .mouth      { width: 18px; height: 14px; background: #1a1a1a; border-color: transparent; border-radius: 4px; bottom: 9px; }
+
+    /* Var 5 — Bug-eyed: huge eyes dominate, medium mouth */
+    .face.scream-var-5.active-scream .brow.left  { transform: rotate(-4deg) translateY(-6px); }
+    .face.scream-var-5.active-scream .brow.right { transform: rotate(4deg) translateY(-6px); }
+    .face.scream-var-5.active-scream .eye        { height: 14px; width: 14px; border-radius: 50%; }
+    .face.scream-var-5.active-scream .mouth      { width: 12px; height: 14px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 8px; }
+
+    /* Var 6 — Tiny mouth panic: brows shoot way up, small O */
+    .face.scream-var-6.active-scream .brow.left  { transform: rotate(-10deg) translateY(-12px); }
+    .face.scream-var-6.active-scream .brow.right { transform: rotate(10deg) translateY(-12px); }
+    .face.scream-var-6.active-scream .eye        { height: 8px; width: 8px; border-radius: 50%; }
+    .face.scream-var-6.active-scream .mouth      { width: 8px; height: 10px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 10px; }
+
+    /* Var 7 — Asymmetric: one brow way up, lopsided horror */
+    .face.scream-var-7.active-scream .brow.left  { transform: rotate(-10deg) translateY(-11px); }
+    .face.scream-var-7.active-scream .brow.right { transform: rotate(3deg) translateY(-4px); }
+    .face.scream-var-7.active-scream .eye        { height: 10px; width: 10px; border-radius: 50%; }
+    .face.scream-var-7.active-scream .mouth      { width: 18px; height: 12px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 9px; }
+
+    /* Var 8 — Silent: very wide flat oval, brows flat-raised */
+    .face.scream-var-8.active-scream .brow.left  { transform: translateY(-7px); }
+    .face.scream-var-8.active-scream .brow.right { transform: translateY(-7px); }
+    .face.scream-var-8.active-scream .eye        { height: 8px; width: 8px; border-radius: 50%; }
+    .face.scream-var-8.active-scream .mouth      { width: 22px; height: 10px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 10px; }
+
+    /* Var 9 — Munch: very tall narrow slit, brows wide-spread */
+    .face.scream-var-9.active-scream .brow.left  { transform: rotate(-7deg) translateY(-9px); }
+    .face.scream-var-9.active-scream .brow.right { transform: rotate(7deg) translateY(-9px); }
+    .face.scream-var-9.active-scream .eye        { height: 10px; width: 8px; border-radius: 50%; }
+    .face.scream-var-9.active-scream .mouth      { width: 8px; height: 24px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 5px; }
+
+    /* Var 10 — Peak horror: everything max */
+    .face.scream-var-10.active-scream .brow.left  { transform: rotate(-9deg) translateY(-12px); }
+    .face.scream-var-10.active-scream .brow.right { transform: rotate(9deg) translateY(-12px); }
+    .face.scream-var-10.active-scream .eye        { height: 14px; width: 14px; border-radius: 50%; }
+    .face.scream-var-10.active-scream .mouth      { width: 16px; height: 20px; background: #1a1a1a; border-color: transparent; border-radius: 50%; bottom: 7px; }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="nav-logo"><span></span>DockLock</div>
+    <a href="https://buy.stripe.com/00w6oG8d3bdDfFaaFt1B604">Support ♡</a>
+  </nav>
+
+  <section class="hero">
+    <div class="badge"><div class="badge-dot"></div>Free for macOS</div>
+    <h1>Keep your Dock <em>Locked</em></h1>
+    <p class="subtitle">DockLock stops your Dock from jumping monitors every time your cursor grazes the bottom of the screen.</p>
+    <div class="cta-row">
+      <a href="#" class="btn btn-primary">Download for Mac</a>
+      <a href="https://buy.stripe.com/00w6oG8d3bdDfFaaFt1B604" class="btn btn-secondary">Support DockLock ♡</a>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <p class="demo-eyebrow">See the difference</p>
+    <div class="demo-panels">
+
+      <div class="demo-panel" id="panel-bad">
+        <div class="demo-panel-label bad">Without DockLock</div>
+        <div class="scene">
+          <div class="face-area">
+            <div class="face frust2 shake-var-7 final-var-8" id="face-bad">
+              <div class="brows"><div class="brow left"></div><div class="brow right"></div></div>
+              <div class="eyes"><div class="eye"></div><div class="eye"></div></div>
+              <div class="mouth"></div>
+              <div class="sweat"></div>
+              <div class="tear"></div>
+            </div>
+          </div>
+          <div class="monitor-row">
+            <div class="monitor">
+              <div class="screen dim">
+                <div class="dock open" id="dock-bad-left">
+                  <div class="di" style="background:#ff5f57"></div><div class="di" style="background:#febc2e"></div>
+                  <div class="di" style="background:#28c840"></div><div class="di" style="background:#007aff"></div>
+                  <div class="di" style="background:#bf5af2"></div>
+                </div>
+              </div>
+              <div class="monitor-neck"></div><div class="monitor-foot"></div>
+            </div>
+            <div class="monitor">
+              <div class="screen">
+                <div class="dock" id="dock-bad-right">
+                  <div class="di" style="background:#ff5f57"></div><div class="di" style="background:#febc2e"></div>
+                  <div class="di" style="background:#28c840"></div><div class="di" style="background:#007aff"></div>
+                  <div class="di" style="background:#bf5af2"></div>
+                </div>
+              </div>
+              <div class="monitor-neck"></div><div class="monitor-foot"></div>
+            </div>
+            <div class="cursor" id="cursor-bad">
+              <svg width="11" height="14" viewBox="0 0 11 14" fill="none"><path d="M1 1l9 5.5-4 .8 1.8 5.2-2.2.5L3.8 8 1 10z" fill="white" stroke="#333" stroke-width="0.6" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="desk"></div>
+        </div>
+      </div>
+
+      <div class="demo-panel" id="panel-good">
+        <div class="demo-panel-label good">With DockLock</div>
+        <div class="scene">
+          <div class="face-area">
+            <div class="face" id="face-good">
+              <div class="brows"><div class="brow left"></div><div class="brow right"></div></div>
+              <div class="eyes"><div class="eye"></div><div class="eye"></div></div>
+              <div class="mouth"></div>
+              <div class="sweat"></div>
+            </div>
+          </div>
+          <div class="monitor-row">
+            <div class="monitor">
+              <div class="screen dim">
+                <div class="dock open" id="dock-good-left">
+                  <div class="di" style="background:#ff5f57"></div><div class="di" style="background:#febc2e"></div>
+                  <div class="di" style="background:#28c840"></div><div class="di" style="background:#007aff"></div>
+                  <div class="di" style="background:#bf5af2"></div>
+                </div>
+              </div>
+              <div class="monitor-neck"></div><div class="monitor-foot"></div>
+            </div>
+            <div class="monitor">
+              <div class="screen">
+                <div class="dock" id="dock-good-right"></div>
+              </div>
+              <div class="monitor-neck"></div><div class="monitor-foot"></div>
+            </div>
+            <div class="lock-badge" id="lock-badge">🔒</div>
+            <div class="cursor" id="cursor-good">
+              <svg width="11" height="14" viewBox="0 0 11 14" fill="none"><path d="M1 1l9 5.5-4 .8 1.8 5.2-2.2.5L3.8 8 1 10z" fill="white" stroke="#333" stroke-width="0.6" stroke-linejoin="round"/></svg>
+            </div>
+          </div>
+          <div class="desk"></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <div class="mockup-section">
+    <div class="mockup-section-copy">
+      <h2>This is the whole app.</h2>
+      <p>Just an icon in your menu bar — that's it.</p>
+    </div>
+    <div class="mockup-wrap">
+      <div class="macos-chrome">
+        <div class="macos-menubar">
+          <div class="macos-menubar-crop"></div>
+          <div class="macos-menubar-right">
+            <!-- DockLock icon — leftmost of the right-aligned group (active) -->
+            <div class="macos-docklock-icon">
+              <svg width="13" height="13" viewBox="0 0 61 62" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M30 0C40.4934 0 49 8.73045 49 19.5C49 19.9613 48.9829 20.4188 48.9521 20.8721C58.5862 22.7448 61 28.0801 61 41C61 58.2935 56.6758 62 36.5 62H24.5C4.32425 62 0 58.2935 0 41C2.50723e-08 28.5323 2.24772 23.1271 11.0625 21.0811C11.0217 20.5595 11 20.0323 11 19.5C11 8.73045 19.5066 0 30 0ZM18.4287 40C12.8573 40 11 43.0624 11 47C11 50.9376 12.8573 54 18.4287 54H42.5713C47.6784 54 50 50.9376 50 47C50 43.0624 48.1427 40 42.5713 40H18.4287ZM30 8C24.1195 8 19 12.9516 19 19.5C19 19.707 19.0046 19.9125 19.0146 20.1162C20.6981 20.0357 22.523 20 24.5 20H36.5C38.092 20 39.5851 20.0261 40.9854 20.0771C40.9942 19.8862 41 19.6938 41 19.5C41 12.9516 35.8805 8 30 8Z" fill="rgba(0,0,0,0.78)"/>
+              </svg>
+            </div>
+            <!-- WiFi -->
+            <div class="macos-sys-icon">
+              <svg width="19" height="15" viewBox="-1 -1 19 15" fill="none">
+                <circle cx="8.5" cy="12" r="1.5" fill="rgba(0,0,0,0.6)"/>
+                <path d="M5.3 9a4.5 4.5 0 0 1 6.4 0" stroke="rgba(0,0,0,0.6)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                <path d="M2.2 5.9a8.8 8.8 0 0 1 12.6 0" stroke="rgba(0,0,0,0.6)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+                <path d="M0 3a12.5 12.5 0 0 1 17 0" stroke="rgba(0,0,0,0.35)" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+              </svg>
+            </div>
+            <!-- Battery -->
+            <div class="macos-sys-icon">
+              <svg width="20" height="10" viewBox="0 0 27 13" fill="none">
+                <rect x="0.6" y="0.6" width="22" height="11.8" rx="3.2" stroke="rgba(0,0,0,0.55)" stroke-width="1.2"/>
+                <rect x="22.6" y="4" width="3.8" height="5" rx="1.5" fill="rgba(0,0,0,0.4)"/>
+                <rect x="2.2" y="2.2" width="15" height="8.6" rx="1.8" fill="rgba(0,0,0,0.6)"/>
+              </svg>
+            </div>
+            <!-- Control Center -->
+            <div class="macos-sys-icon">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                <!-- Top pill toggle -->
+                <rect x="0.6" y="0.6" width="13.8" height="6" rx="3" stroke="rgba(0,0,0,0.55)" stroke-width="1.2"/>
+                <circle cx="11" cy="3.6" r="2.2" fill="rgba(0,0,0,0.55)"/>
+                <!-- Bottom pill toggle -->
+                <rect x="0.6" y="8.4" width="13.8" height="6" rx="3" stroke="rgba(0,0,0,0.55)" stroke-width="1.2"/>
+                <circle cx="4" cy="11.4" r="2.2" fill="rgba(0,0,0,0.55)"/>
+              </svg>
+            </div>
+            <!-- Search / Spotlight -->
+            <div class="macos-sys-icon">
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                <circle cx="6" cy="6" r="4.5" stroke="rgba(0,0,0,0.6)" stroke-width="1.4"/>
+                <line x1="9.5" y1="9.5" x2="14" y2="14" stroke="rgba(0,0,0,0.6)" stroke-width="1.8" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <span class="macos-time">9:41 AM</span>
+          </div>
+        </div>
+        <div class="macos-dropdown-area">
+          <div class="menu-mockup">
+            <div class="menu-item disabled"><div class="menu-dot dot-green"></div>Running</div>
+            <div class="menu-item secondary-text">&nbsp;&nbsp;&nbsp;&nbsp;142 dock jumps prevented</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item action">Disable</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item action">Settings…</div>
+            <div class="menu-item action">Support DockLock ♡</div>
+            <div class="menu-divider"></div>
+            <div class="menu-item muted">Quit DockLock</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Made by Tim Lenardo</span>
+    <a href="https://buy.stripe.com/00w6oG8d3bdDfFaaFt1B604">Support DockLock ♡</a>
+  </footer>
+
+
+  <script>
+    // ── Cursor positions (relative to .monitor-row, 240px wide) ──
+    const POS = {
+      LW1:  { top: '22px', left: '42px'  },
+      LW2:  { top: '40px', left: '70px'  },
+      LW3:  { top: '28px', left: '25px'  },
+      LMID: { top: '52px', left: '50px'  },  // mid-left, rage bounce target
+      LBOT: { top: '73px', left: '55px'  },
+      RW:   { top: '22px', left: '178px' },
+      RMID: { top: '52px', left: '175px' },  // mid-right, good-panel bounce target
+      RBOT: { top: '73px', left: '175px' },
+    };
+
+    // ── All timing config — edit via the panel ──
+    const C = {
+      // Bad panel (ms from loop start)
+      jiggle1:        400,
+      jiggle2:        1000,
+      jiggle3:        1600,
+      moveRight:      2200,
+      hitRightBot:    3100,
+      dockJumps:      3750,
+      faceReacts:     4000,   // face: frustrated (person just noticed — ~250ms delay)
+      faceCollects:   5200,   // face: concentrating (they've composed themselves)
+      backToLeft:     5300,
+      attempt1:       5700,
+      faceConfused:   6500,   // after attempt 1, nothing happened
+      pullBack1:      7000,
+      attempt2:       7500,
+      faceFrustSweat: 8200,
+      pullBack2:      8650,
+      attempt3:       9000,   // rage hit 1 — cursor taps bottom
+      faceRage1:      9200,   // face reacts to hit 1
+      rage1:          9350,   // bounce up
+      rage2:          9500,   // rage hit 2 — cursor taps bottom
+      faceRageMax:    10000,  // face escalates to MAX (after all three taps)
+      rage3:          9650,   // bounce up
+      rage4:          9800,   // rage hit 3 (last)
+      giveUp:         11500,  // face neutral (flat)
+      newIdea:        12000,  // face: concentrating (new idea!)
+      approachRight:  13600,  // cursor → right screen
+      approachBot:    14500,  // cursor drifts toward right dock (slow)
+      dockJumpsBack:  15200,  // dock jumps LEFT just before cursor arrives
+      faceBlank:      15200,  // face goes blank simultaneously
+      blinkStart:     16250,  // two slow blinks
+      rageErupt:      17550,  // MAX rage face + shake
+      loopDuration:   19500,
+      // Cursor transition speeds (seconds)
+      sJiggle:  0.40,
+      sNormal:  0.75,
+      sFast:    0.48,
+      sSlow:    0.82,
+      sRage:    0.18,   // rage bounce — very fast
+    };
+
+    // ── Element refs ──
+    const cb  = document.getElementById('cursor-bad');
+    const cg  = document.getElementById('cursor-good');
+    const fb  = document.getElementById('face-bad');
+    const fg  = document.getElementById('face-good');
+    const dbl = document.getElementById('dock-bad-left');
+    const dbr = document.getElementById('dock-bad-right');
+    const dgl = document.getElementById('dock-good-left');
+    const lb  = document.getElementById('lock-badge');
+    function popCoin() {
+      lb.classList.remove('pop');
+      void lb.offsetWidth;  // force reflow so animation restarts each tap
+      lb.classList.add('pop');
+    }
+
+    // ── Curved cursor movement via quadratic bezier ──
+    // Each move gets an alternating arc direction so the path feels hand-drawn.
+    let arcSign = { bad: 1, good: 1 };
+
+    function animCursor(el, toPos, durationSec, sign) {
+      const toLeft = parseFloat(toPos.left);
+      const toTop  = parseFloat(toPos.top);
+      const fromLeft = parseFloat(el.style.left) || 44;
+      const fromTop  = parseFloat(el.style.top)  || 24;
+
+      const dx  = toLeft - fromLeft;
+      const dy  = toTop  - fromTop;
+      const len = Math.sqrt(dx * dx + dy * dy) || 1;
+
+      // Control point sits perpendicular to the midpoint of the path.
+      // Curviness scales with distance so short jiggle moves barely arc.
+      const curviness = Math.min(0.30, Math.max(0.08, len * 0.0022));
+      const cpLeft = (fromLeft + toLeft) / 2 + (-dy / len) * sign * len * curviness;
+      const cpTop  = (fromTop  + toTop)  / 2 + ( dx / len) * sign * len * curviness;
+
+      const ms    = durationSec * 1000;
+      const start = performance.now();
+      if (el._raf) cancelAnimationFrame(el._raf);
+
+      function tick(now) {
+        const raw = Math.min((now - start) / ms, 1);
+        // Ease-in-out cubic
+        const t = raw < 0.5 ? 4 * raw * raw * raw : 1 - Math.pow(-2 * raw + 2, 3) / 2;
+        el.style.left = ((1-t)*(1-t)*fromLeft + 2*(1-t)*t*cpLeft + t*t*toLeft) + 'px';
+        el.style.top  = ((1-t)*(1-t)*fromTop  + 2*(1-t)*t*cpTop  + t*t*toTop)  + 'px';
+        if (raw < 1) el._raf = requestAnimationFrame(tick);
+      }
+      el._raf = requestAnimationFrame(tick);
+    }
+
+    function snap(el, pos) {
+      if (el._raf) cancelAnimationFrame(el._raf);
+      el.style.left = pos.left;
+      el.style.top  = pos.top;
+    }
+
+    // go() flips arc direction on each call so paths weave naturally
+    function go(el, pos, durationSec, panel) {
+      arcSign[panel] *= -1;
+      animCursor(el, pos, durationSec, arcSign[panel]);
+    }
+
+    function face(el, ...states) {
+      el.classList.remove('active-frust','concentrating','confused','exasperated','sweating','heavy-sweating','crying','rage','blinking','shaking','flat-mouth','tiny-mouth');
+      states.forEach(s => s && el.classList.add(s));
+    }
+
+    let timers = [];
+    function at(ms, fn) { timers.push(setTimeout(fn, ms)); }
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+    const disabledSteps = new Set();
+    function atKey(key, fn) { if (!disabledSteps.has(key)) at(C[key], fn); }
+
+    let badInterval, goodInterval;
+
+    function runBadLoop() {
+      clearTimers();
+      arcSign.bad = 1;  // reset arc direction each loop
+
+      snap(cb, POS.LW1);
+      dbl.classList.add('open');
+      dbr.classList.remove('open');
+      face(fb);
+
+
+      // Move to right screen
+      atKey('moveRight',   () => go(cb, POS.RW,   C.sNormal, 'bad'));
+      atKey('hitRightBot', () => go(cb, POS.RBOT,  C.sFast,   'bad'));
+
+      // Dock jumps — face stays happy for a beat before they notice
+      atKey('dockJumps',   () => { dbl.classList.remove('open'); dbr.classList.add('open'); });
+      atKey('faceReacts',  () => face(fb, 'active-frust'));
+
+      // Collect self — concentrating
+      atKey('faceCollects',  () => face(fb, 'concentrating'));
+      atKey('backToLeft',    () => go(cb, POS.LW1, C.sSlow,  'bad'));
+
+      // Attempt 1
+      atKey('attempt1',      () => go(cb, POS.LBOT, C.sFast,   'bad'));
+      atKey('faceConfused',  () => face(fb, 'confused', 'sweating'));
+      atKey('pullBack1',     () => go(cb, POS.LW2,  C.sJiggle, 'bad'));
+
+      // Attempt 2
+      atKey('attempt2',      () => go(cb, POS.LBOT, C.sFast,   'bad'));
+      atKey('faceFrustSweat',() => face(fb, 'active-frust', 'sweating'));
+      atKey('pullBack2',     () => go(cb, POS.LW3,  C.sJiggle, 'bad'));
+
+      // Attempt 3 — RAGE: cursor taps first, face reacts slightly after
+      atKey('attempt3',   () => go(cb, POS.LBOT, C.sFast, 'bad'));
+      atKey('faceRage1',  () => face(fb, 'active-frust', 'sweating', 'heavy-sweating'));
+      atKey('rage1',      () => go(cb, POS.LMID, C.sRage, 'bad'));
+      atKey('rage2',      () => go(cb, POS.LBOT, C.sRage, 'bad'));
+      atKey('faceRageMax',() => fb.classList.add('rage'));  // → MAX
+      atKey('rage3',    () => go(cb, POS.LMID, C.sRage, 'bad'));
+      atKey('rage4',    () => go(cb, POS.LBOT, C.sRage, 'bad'));
+
+      // Give up — face goes flat/neutral
+      atKey('giveUp', () => face(fb, 'flat-mouth'));
+
+      // Big pause... then new idea, cursor hasn't moved
+      atKey('newIdea',       () => face(fb, 'concentrating'));
+      atKey('approachRight', () => go(cb, POS.RW,   C.sNormal, 'bad'));
+      atKey('approachBot',   () => go(cb, POS.RBOT, C.sSlow,   'bad'));  // slow — hopeful
+
+      // Dock jumps left JUST as cursor nears dock — the ultimate insult
+      atKey('dockJumpsBack', () => {
+        dbr.classList.remove('open');
+        dbl.classList.add('open');
+      });
+      atKey('faceBlank', () => face(fb, 'flat-mouth'));  // blank stare — flat mouth persists
+
+      // Two slow blinks
+      atKey('blinkStart', () => {
+        fb.classList.add('blinking');
+        setTimeout(() => fb.classList.remove('blinking'), 750);
+      });
+
+      // RAGE ERUPTION — tiny-mouth rage face + chosen shake, runs until loop reset
+      atKey('rageErupt', () => {
+        face(fb, 'tiny-mouth', 'shaking');
+      });
+    }
+
+    function runGoodLoop() {
+      arcSign.good = 1;
+
+      snap(cg, POS.LW1);
+      dgl.classList.add('open');
+      lb.classList.remove('pop');
+      face(fg);
+
+      atKey('moveRight',  () => go(cg, POS.RW,   C.sNormal, 'good'));
+      atKey('hitRightBot',() => go(cg, POS.RBOT,  C.sFast,  'good'));
+      atKey('dockJumps',  () => popCoin());
+      atKey('backToLeft', () => go(cg, POS.LW1,  C.sSlow,   'good'));
+
+      atKey('attempt1',       () => { go(cg, POS.RBOT, C.sFast,   'good'); setTimeout(popCoin, 400); });
+      atKey('faceConfused',   () => {});
+      atKey('pullBack1',      () => go(cg, POS.RW, C.sJiggle, 'good'));
+
+      atKey('attempt2',       () => { go(cg, POS.RBOT, C.sFast,   'good'); setTimeout(popCoin, 400); });
+      atKey('faceFrustSweat', () => {});
+      atKey('pullBack2',      () => go(cg, POS.RW, C.sJiggle, 'good'));
+
+      // Attempt 3 — rage taps on RIGHT dock (coin pops ~200ms after cursor lands)
+      atKey('attempt3', () => { go(cg, POS.RBOT, C.sFast, 'good'); setTimeout(popCoin, 400); });
+      atKey('rage1',    () => go(cg, POS.RMID, C.sRage, 'good'));
+      atKey('rage2',    () => { go(cg, POS.RBOT, C.sRage, 'good'); setTimeout(popCoin, 400); });
+      atKey('rage3',    () => go(cg, POS.RMID, C.sRage, 'good'));
+      atKey('rage4',    () => { go(cg, POS.RBOT, C.sRage, 'good'); setTimeout(popCoin, 400); });
+      // Good panel: approach right dock (dock stays put — DockLock works!) 🔒
+      atKey('approachRight', () => go(cg, POS.RW,   C.sNormal, 'good'));
+      atKey('approachBot',   () => go(cg, POS.RBOT, C.sSlow,   'good'));
+      atKey('dockJumpsBack', () => popCoin());  // dock stays! 🔒
+    }
+
+    const panelBad  = document.getElementById('panel-bad');
+    const panelGood = document.getElementById('panel-good');
+    let activePanel = null;
+    let switchTimer = null;
+
+    function setActive(which) {
+      clearTimeout(switchTimer);
+      clearInterval(badInterval);
+      clearInterval(goodInterval);
+      clearTimers();
+
+      activePanel = which;
+      panelBad.classList.toggle('panel-inactive',  which !== 'bad');
+      panelGood.classList.toggle('panel-inactive', which !== 'good');
+
+      // Reset faces so no animation (e.g. shaking) lingers on the inactive panel
+      face(fb);
+      face(fg);
+
+      if (which === 'bad') {
+        runBadLoop(); // runBadLoop calls clearTimers internally — fine, idempotent
+      } else {
+        runGoodLoop();
+      }
+
+      // Auto-switch after one full loop
+      switchTimer = setTimeout(() => setActive(which === 'bad' ? 'good' : 'bad'), C.loopDuration);
+    }
+
+    // Hover on inactive panel triggers immediate switch to that panel
+    panelBad.addEventListener('mouseenter',  () => { if (activePanel !== 'bad')  setActive('bad');  });
+    panelGood.addEventListener('mouseenter', () => { if (activePanel !== 'good') setActive('good'); });
+
+    setActive('bad');
+
+    // ── Rage picker cycling: one-brow → asymmetric medium → max → reset ──
+    ;(function() {
+      const PHASE = 1100;             // ms in each phase
+      const CYCLE = PHASE * 3 + 500; // total + gap before restart
+      for (let i = 1; i <= 10; i++) {
+        const el = document.getElementById('rp' + i);
+        if (!el) continue;
+        (function(elem, off) {
+          function tick() {
+            // Phase 1: one brow raised
+            elem.classList.add('rage-phase-1');
+            // Phase 2: asymmetric medium
+            setTimeout(() => {
+              elem.classList.remove('rage-phase-1');
+              elem.classList.add('rage-phase-2');
+            }, PHASE);
+            // Phase 3: max
+            setTimeout(() => {
+              elem.classList.remove('rage-phase-2');
+              elem.classList.add('rage-phase-3');
+            }, PHASE * 2);
+            // Reset to happy
+            setTimeout(() => elem.classList.remove('rage-phase-3'), PHASE * 3);
+          }
+          setTimeout(() => { tick(); setInterval(tick, CYCLE); }, off);
+        })(el, (i - 1) * 220);
+      }
+    })();
+
+  </script>
+
+</body>
+</html>
