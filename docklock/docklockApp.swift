@@ -190,7 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Loads the SVG directly and lets AppKit render it as a vector at whatever scale the screen needs.
     private func renderMenuBarIcon(locked: Bool, size: CGFloat = 16) -> NSImage? {
-        let resourceName = locked ? "docklock_locked" : "docklock_unlocked"
+        let resourceName = locked ? "docklock" : "dockunlock"
         guard let url = Bundle.main.url(forResource: resourceName, withExtension: "svg"),
               let source = NSImage(contentsOf: url)?.copy() as? NSImage else {
             print("[DockLock] ❌ Failed to load \(resourceName).svg from bundle")

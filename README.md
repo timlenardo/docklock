@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docklock-smol.svg" width="72" height="72" alt="DockLock" />
+<img src="docs/logo.svg" width="80" height="80" alt="DockLock" />
 
 # DockLock
 
