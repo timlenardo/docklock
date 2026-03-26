@@ -1,6 +1,8 @@
 <div align="center">
 
-<img src="docs/logo.svg" width="80" height="80" alt="DockLock" />
+
+<img width="256" height="256" alt="appicon-512" src="https://github.com/user-attachments/assets/3fd7b0f5-3b0f-4223-b620-90557e9a6bac" />
+
 
 # DockLock
 
