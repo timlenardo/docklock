@@ -8,7 +8,7 @@
 
 DockLock stops your Dock from jumping monitors every time your cursor grazes the bottom of the screen.
 
-[**See the demo →**](https://timlenardo.github.io/docklock/)&nbsp;&nbsp;·&nbsp;&nbsp;[Download](#download)&nbsp;&nbsp;·&nbsp;&nbsp;[Support ♡](https://buy.stripe.com/00w6oG8d3bdDfFaaFt1B604)
+[**Website →**](https://timlenardo.github.io/docklock/)&nbsp;&nbsp;·&nbsp;&nbsp;[Download](#download)&nbsp;&nbsp;·&nbsp;&nbsp;[Support ♡](https://buy.stripe.com/00w6oG8d3bdDfFaaFt1B604)
 
 </div>
 
@@ -16,17 +16,17 @@ DockLock stops your Dock from jumping monitors every time your cursor grazes the
 
 ## What it does
 
-On macOS with multiple monitors, the Dock hides and re-appears on whatever screen your cursor is closest to — even when you're just trying to scroll or reach the bottom of a window. It's one of the most persistent annoyances in the multi-display workflow.
+On macOS with multiple monitors, accidentally brushing the bottom of the wrong screen can cause your Dock to jump to that screen. It's happens all the time, and it's maddening.
 
-DockLock fixes it. It sits quietly in your menu bar and monitors your cursor. The Dock stays on the screen you put it on, and only moves intentionally.
+Docklock fixes it. It quietly sits in your menu bar and prevents your Dock from jumping monitors.
 
-**→ [Watch the animated demo](https://timlenardo.github.io/docklock/)**
+**→ [Watch the demo](https://timlenardo.github.io/docklock/)**
 
 ## Features
 
 - **Zero config** — install it, grant accessibility access, done
 - **Lightweight** — just a menu bar icon, no bloat
-- **Smart detection** — tracks actual cursor intent, not just position
+- **Lock/Unlock** — easily unlock if you do want to move your Dock for some reason
 - **Jump counter** — see how many accidental dock jumps it's prevented
 - **Free** — pay what you want
 
