@@ -23,7 +23,6 @@ class MouseMonitor: ObservableObject {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private let threshold: CGFloat = 3.0
-    private(set) var isMonitoring = false
 
     // MARK: - Counting state
     // A "block" is counted when the cursor stays in the clamped zone for 2+ seconds.
@@ -52,9 +51,10 @@ class MouseMonitor: ObservableObject {
     // MARK: - Monitoring
 
     func startMonitoring() {
-        guard !isMonitoring else { return }
-        isMonitoring = true
-
+        if let tap = eventTap {
+            CGEvent.tapEnable(tap: tap, enable: true)
+            return
+        }
         let eventMask: CGEventMask = (1 << CGEventType.mouseMoved.rawValue) |
                                       (1 << CGEventType.leftMouseDragged.rawValue) |
                                       (1 << CGEventType.rightMouseDragged.rawValue) |
@@ -69,15 +69,20 @@ class MouseMonitor: ObservableObject {
             place: .headInsertEventTap,
             options: .defaultTap,
             eventsOfInterest: eventMask,
-            callback: { _, _, event, userInfo -> Unmanaged<CGEvent>? in
+            callback: { _, type, event, userInfo -> Unmanaged<CGEvent>? in
                 guard let userInfo else { return Unmanaged.passUnretained(event) }
                 let monitor = Unmanaged<MouseMonitor>.fromOpaque(userInfo).takeUnretainedValue()
+                // Handle tap-disabled notifications before processing mouse movement.
+                if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+                    monitor.resetNearBottomState()
+                    monitor.startMonitoring()
+                    return Unmanaged.passUnretained(event)
+                }
                 return monitor.handleEvent(event)
             },
             userInfo: userInfo
         ) else {
             print("[DockLock] ❌ Failed to create event tap — missing accessibility permission?")
-            isMonitoring = false
             return
         }
 
@@ -97,13 +102,16 @@ class MouseMonitor: ObservableObject {
         }
         eventTap = nil
         runLoopSource = nil
-        isMonitoring = false
         resetNearBottomState()
     }
 
     func toggleLock() {
         isLocked.toggle()
-        if !isLocked { resetNearBottomState() }
+        if isLocked {
+            startMonitoringIfPermitted()
+        } else {
+            resetNearBottomState()
+        }
     }
 
     // MARK: - Core Logic
